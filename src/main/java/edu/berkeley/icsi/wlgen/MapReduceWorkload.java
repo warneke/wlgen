@@ -218,8 +218,17 @@ final class MapReduceWorkload {
 					continue;
 				}
 
-				Partition.createPartition(mrj.getNumberOfReduceTasks(), mrj.getSizeOfIntermediateData(), minimum, percentile10, percentile25, median, percentile75, percentile90, maximum);
+				final long[] partition = Partition.createPartition(mrj.getNumberOfReduceTasks(),
+					mrj.getSizeOfIntermediateData(), minimum, percentile10, percentile25, median, percentile75,
+					percentile90, maximum);
 
+				long sum = 0L;
+				for(int i = 0; i < partition.length; ++i) {
+					sum += partition[i];
+				}
+				
+				System.out.println(mrj.getSizeOfIntermediateData() + " " + sum);
+				
 				// System.out.println(numberOfReduceTasks);
 
 			}
@@ -231,7 +240,7 @@ final class MapReduceWorkload {
 			}
 		}
 
-		//findDependencies(mapReduceJobs);
+		// findDependencies(mapReduceJobs);
 
 		return new MapReduceWorkload(mapReduceJobs);
 	}
@@ -254,13 +263,11 @@ final class MapReduceWorkload {
 		}
 
 		final File outputFile = mapReduceJob.getOutputFile();
-		
+
 		final Iterator<MapReduceJob> it = outputFile.inputIterator();
 
 		System.out.print(mapReduceJob.getJobID());
 
-		
-		
 		while (it.hasNext()) {
 			System.out.print(" -> ");
 			findDependencies(it.next(), alreadyVisited);

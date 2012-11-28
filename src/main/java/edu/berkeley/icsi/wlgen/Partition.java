@@ -2,7 +2,7 @@ package edu.berkeley.icsi.wlgen;
 
 final class Partition {
 
-	static void createPartition(final int numberOfReducers, final long sizeOfIntermediateInput, final long minimum,
+	static long[] createPartition(final int numberOfReducers, final long sizeOfIntermediateInput, final long minimum,
 			final long percentile10, final long percentile25, final long median, final long percentile75,
 			final long percentile90, final long maximum) {
 
@@ -20,18 +20,41 @@ final class Partition {
 		partition[toIndex(numberOfReducers, 90)] = percentile90;
 		partition[numberOfReducers - 1] = maximum;
 
-		/*
-		 * System.out.println("Total:\t" + mrj.getSizeOfIntermediateData());
-		 * System.out.println("Maximum:\t" + maximum);
-		 * System.out.println("Median:\t" + median);
-		 * System.out.println("75 percentile:\t" + percentile75);
-		 * System.out.println("Minimum:\t" + minimum);
-		 */
-		if (numberOfReducers == 1) {
-			partition[0] = sizeOfIntermediateInput;
-		} else {
-			printPartition(partition);
+		int start = 0;
+		int end = -1;
+		while (true) {
+
+			end = findNextEnd(partition, start + 1);
+			if (end == -1) {
+				break;
+			}
+
+			final int len = end - start;
+			final long step = (partition[end] - partition[start]) / len;
+			if (step < 0L) {
+				throw new IllegalStateException("Calculated step size is " + step);
+			}
+
+			for (int i = 1; i < len; ++i) {
+				partition[start + i] = partition[start] + (i * step);
+			}
+
+			start = end;
 		}
+
+		return partition;
+	}
+
+	private static int findNextEnd(final long[] partition, final int start) {
+
+		for (int i = start; i < partition.length; ++i) {
+
+			if (partition[i] != -1L) {
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	private static int toIndex(final int arrayLength, final int percentile) {
@@ -45,14 +68,15 @@ final class Partition {
 
 		System.out.println("====================================================================================");
 		for (int i = 0; i < partition.length; ++i) {
+
 			if (partition[i] != -1L) {
-				System.out.println(i + "\t" + partition[i]);
+				System.out.print(partition[i]);
 			}
-			//if (i < (partition.length - 1)) {
-			//	System.out.print(":");
-			//}
+			if (i < (partition.length - 1)) {
+				System.out.print(":");
+			}
 
 		}
-		//System.out.println("");
+		System.out.println("");
 	}
 }

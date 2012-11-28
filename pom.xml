@@ -72,6 +72,11 @@
 	</build>
 
  <dependencies>
+  <dependency>
+     <groupId>eu.stratosphere</groupId>
+     <artifactId>pact-common</artifactId>
+     <version>0.2.1</version>
+  </dependency>
  </dependencies>
 </project>
 
