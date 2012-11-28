@@ -11,6 +11,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
+import edu.berkeley.icsi.wlgen.datagen.DataGenerator;
 import eu.stratosphere.nephele.fs.FileSystem;
 import eu.stratosphere.nephele.fs.Path;
 
@@ -37,13 +38,18 @@ public final class WorkloadGenerator {
 			throw new IllegalStateException("Please load the workload traces before generating the input data");
 		}
 
+		final DataGenerator dataGenerator = new DataGenerator(jobManagerAddress, basePath);
+
 		final Map<Long, File> inputFiles = this.mapReduceWorkload.getInputFiles();
 		final Iterator<File> it = inputFiles.values().iterator();
 
 		while (it.hasNext()) {
-
-			final File inputFile = it.next();
-			System.out.println(inputFile.getName());
+			dataGenerator.generate(it.next());
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException ie) {
+				break;
+			}
 		}
 	}
 

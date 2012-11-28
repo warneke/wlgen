@@ -1,9 +1,9 @@
 package edu.berkeley.icsi.wlgen.datagen;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import edu.berkeley.icsi.wlgen.File;
 import eu.stratosphere.nephele.client.JobClient;
 import eu.stratosphere.nephele.configuration.ConfigConstants;
 import eu.stratosphere.nephele.configuration.Configuration;
@@ -22,21 +22,32 @@ public class DataGenerator {
 
 	private static final int BLOCK_SIZE = 64 * 1024 * 1024; // 64 MB
 
-	private final JobClient jobClient;
+	private static final int SUBTASKS_PER_INSTANCE = 4;
 
-	private JobInputVertex inputVertex;
+	private final String jobManagerAddress;
 
-	private JobFileOutputVertex outputVertex;
+	private final String basePath;
 
-	public DataGenerator(final String jobManagerAddress) throws IOException {
+	private final JobGraph jobGraph;
 
-		final JobGraph jobGraph = new JobGraph("Data Generator");
+	private final JobInputVertex inputVertex;
 
-		this.inputVertex = new JobInputVertex("Input", jobGraph);
+	private final JobFileOutputVertex outputVertex;
+
+	public DataGenerator(final String jobManagerAddress, final String basePath) throws IOException {
+
+		this.jobManagerAddress = jobManagerAddress;
+		this.basePath = basePath;
+
+		this.jobGraph = new JobGraph("Data Generator");
+
+		this.inputVertex = new JobInputVertex("Input", this.jobGraph);
 		this.inputVertex.setInputClass(DataGeneratorInput.class);
+		this.inputVertex.setNumberOfSubtasksPerInstance(SUBTASKS_PER_INSTANCE);
 
-		this.outputVertex = new JobFileOutputVertex("Output", jobGraph);
+		this.outputVertex = new JobFileOutputVertex("Output", this.jobGraph);
 		this.outputVertex.setFileOutputClass(DataGeneratorOutput.class);
+		this.outputVertex.setNumberOfSubtasksPerInstance(SUBTASKS_PER_INSTANCE);
 
 		this.outputVertex.setVertexToShareInstancesWith(this.inputVertex);
 
@@ -46,7 +57,7 @@ public class DataGenerator {
 			throw new IOException(e);
 		}
 
-		final File jarFile = File.createTempFile("dg", ".jar");
+		final java.io.File jarFile = java.io.File.createTempFile("datagen", ".jar");
 		jarFile.deleteOnExit();
 
 		final JarFileCreator jfc = new JarFileCreator(jarFile);
@@ -55,18 +66,28 @@ public class DataGenerator {
 
 		jfc.createJarFile();
 
+		this.jobGraph.addJar(new Path("file://" + jarFile.getAbsolutePath()));
+	}
+
+	public void generate(final File inputFile) throws IOException {
+
+		final int numberOfSubtasks = (int) ((inputFile.getSize() + (BLOCK_SIZE - 1)) / BLOCK_SIZE);
+
+		this.inputVertex.setNumberOfSubtasks(numberOfSubtasks);
+		this.outputVertex.setNumberOfSubtasks(numberOfSubtasks);
+
+		this.outputVertex.setFilePath(new Path(this.basePath, inputFile.getName()));
+		this.outputVertex.getConfiguration().setLong(FILE_SIZE, inputFile.getSize());
+
 		final InetSocketAddress isa = new InetSocketAddress(jobManagerAddress,
 			ConfigConstants.DEFAULT_JOB_MANAGER_IPC_PORT);
 
-		this.jobClient = new JobClient(jobGraph, new Configuration(), isa);
-	}
+		final JobClient jobClient = new JobClient(this.jobGraph, new Configuration(), isa);
 
-	public void generate(final Path basePath, final File inputFile) {
-
-	}
-
-	public void shutdown() {
-
-		this.jobClient.close();
+		try {
+			jobClient.submitJobAndWait();
+		} catch (Exception e) {
+			throw new IOException(e);
+		}
 	}
 }

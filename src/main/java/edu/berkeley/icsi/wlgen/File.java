@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-final class File {
+public final class File {
 
 	private final Set<MapReduceJob> usedAsInput = new HashSet<MapReduceJob>();
 
@@ -20,12 +20,12 @@ final class File {
 		this.size = size;
 	}
 
-	String getName() {
+	public String getName() {
 
 		return this.name;
 	}
 
-	long getSize() {
+	public long getSize() {
 
 		return this.size;
 	}
