@@ -28,10 +28,11 @@ final class PactPlanGenerator {
 
 		final ReduceContract reducer = new ReduceContract.Builder(ReduceTask.class, PactString.class, 0)
 			.input(mapper)
-			.name("Count Words")
+			.name("Map")
 			.build();
 
 		final FileDataSink out = new FileDataSink(RecordOutputFormat.class, outputFilePath, reducer, "Reducer");
+
 		RecordOutputFormat.configureRecordFormat(out)
 			.recordDelimiter('\n')
 			.fieldDelimiter(' ')
