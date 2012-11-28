@@ -3,6 +3,7 @@ package edu.berkeley.icsi.wlgen;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -12,18 +13,22 @@ import java.util.Set;
 
 final class MapReduceWorkload {
 
-	private final LinkedHashMap<String, MapReduceJob> mapReduceJobs;
+	private final Map<String, MapReduceJob> mapReduceJobs;
 
-	// private final Map<Long, File> files = new HashMap<Long, File>();
+	private final Map<Long, File> inputFiles;
 
-	private MapReduceWorkload(final LinkedHashMap<String, MapReduceJob> mapReduceJobs) {
-		this.mapReduceJobs = mapReduceJobs;
+	private MapReduceWorkload(final LinkedHashMap<String, MapReduceJob> mapReduceJobs, final Map<Long, File> inputFiles) {
+
+		this.mapReduceJobs = Collections.unmodifiableMap(mapReduceJobs);
+		this.inputFiles = Collections.unmodifiableMap(inputFiles);
 	}
 
-	static MapReduceWorkload reconstructFromTraces() throws IOException {
+	static MapReduceWorkload reconstructFromTraces(final String inputDir, final int mapLimit, final int reduceLimit,
+			final long filesizeLimit, final int jobLimit) throws IOException {
 
 		final LinkedHashMap<String, MapReduceJob> mapReduceJobs = new LinkedHashMap<String, MapReduceJob>();
 		final Map<Long, File> files = new HashMap<Long, File>();
+		final Map<Long, File> inputFiles = new HashMap<Long, File>();
 		BufferedReader br = null;
 		String line;
 
@@ -31,6 +36,7 @@ final class MapReduceWorkload {
 
 			br = new BufferedReader(new FileReader("/home/warneke/wlgen/JobStats.txt"));
 
+			int count = 0;
 			while ((line = br.readLine()) != null) {
 
 				final String[] fields = line.split("\t");
@@ -48,11 +54,19 @@ final class MapReduceWorkload {
 					continue;
 				}
 
+				if (numberOfMapTasks > mapLimit) {
+					continue;
+				}
+
 				int numberOfReduceTasks;
 				try {
 					numberOfReduceTasks = Integer.parseInt(fields[2]);
 				} catch (NumberFormatException nfe) {
 					System.err.println("Cannot parse trace '" + line + "', skipping it...");
+					continue;
+				}
+
+				if (numberOfReduceTasks > reduceLimit) {
 					continue;
 				}
 
@@ -66,6 +80,10 @@ final class MapReduceWorkload {
 
 				if (sizeOfInputData.longValue() < 0L) {
 					System.err.println("Skipping trace with negative input file size " + fields[3]);
+					continue;
+				}
+
+				if (sizeOfInputData.longValue() > filesizeLimit) {
 					continue;
 				}
 
@@ -100,6 +118,7 @@ final class MapReduceWorkload {
 				if (inputFile == null) {
 					inputFile = new File(sizeOfInputData.longValue());
 					files.put(sizeOfInputData, inputFile);
+					inputFiles.put(sizeOfInputData, inputFile);
 				}
 
 				// Find output file
@@ -122,6 +141,10 @@ final class MapReduceWorkload {
 					numberOfReduceTasks, inputFile, sizeOfIntermediateData, outputFile);
 
 				mapReduceJobs.put(mrj.getJobID(), mrj);
+
+				if (++count >= jobLimit) {
+					break;
+				}
 			}
 
 		} finally {
@@ -145,7 +168,6 @@ final class MapReduceWorkload {
 
 				final MapReduceJob mrj = mapReduceJobs.get(fields[0]);
 				if (mrj == null) {
-					System.err.println("Cannot find map reduce job with ID " + fields[0]);
 					continue;
 				}
 
@@ -223,12 +245,12 @@ final class MapReduceWorkload {
 					percentile90, maximum);
 
 				long sum = 0L;
-				for(int i = 0; i < partition.length; ++i) {
+				for (int i = 0; i < partition.length; ++i) {
 					sum += partition[i];
 				}
-				
+
 				System.out.println(mrj.getSizeOfIntermediateData() + " " + sum);
-				
+
 				// System.out.println(numberOfReduceTasks);
 
 			}
@@ -242,7 +264,17 @@ final class MapReduceWorkload {
 
 		// findDependencies(mapReduceJobs);
 
-		return new MapReduceWorkload(mapReduceJobs);
+		return new MapReduceWorkload(mapReduceJobs, inputFiles);
+	}
+
+	Map<Long, File> getInputFiles() {
+
+		return this.inputFiles;
+	}
+
+	Map<String, MapReduceJob> getMapReduceJobs() {
+
+		return this.mapReduceJobs;
 	}
 
 	private static void findDependencies(final LinkedHashMap<String, MapReduceJob> mapReduceJobs) {

@@ -10,10 +10,24 @@ final class File {
 
 	private final Set<MapReduceJob> usedAsOutput = new HashSet<MapReduceJob>();
 
+	private final String name;
+
 	private final long size;
 
 	File(final long size) {
+
+		this.name = "file_" + size;
 		this.size = size;
+	}
+
+	String getName() {
+
+		return this.name;
+	}
+
+	long getSize() {
+
+		return this.size;
 	}
 
 	void usedAsInputBy(final MapReduceJob mapReduceJob) {
