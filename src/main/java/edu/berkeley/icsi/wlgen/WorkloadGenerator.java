@@ -1,6 +1,7 @@
 package edu.berkeley.icsi.wlgen;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -12,10 +13,22 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
 import edu.berkeley.icsi.wlgen.datagen.DataGenerator;
+import eu.stratosphere.nephele.client.AbstractJobResult;
+import eu.stratosphere.nephele.client.JobSubmissionResult;
+import eu.stratosphere.nephele.configuration.ConfigConstants;
+import eu.stratosphere.nephele.configuration.GlobalConfiguration;
 import eu.stratosphere.nephele.fs.FileSystem;
 import eu.stratosphere.nephele.fs.Path;
+import eu.stratosphere.nephele.jobgraph.JobGraph;
+import eu.stratosphere.nephele.util.JarFileCreator;
+import eu.stratosphere.pact.common.plan.Plan;
+import eu.stratosphere.pact.compiler.PactCompiler;
+import eu.stratosphere.pact.compiler.jobgen.JobGraphGenerator;
+import eu.stratosphere.pact.compiler.plan.OptimizedPlan;
 
 public final class WorkloadGenerator {
+
+	final PactCompiler pactCompiler = new PactCompiler();
 
 	private MapReduceWorkload mapReduceWorkload = null;
 
@@ -26,7 +39,7 @@ public final class WorkloadGenerator {
 			filesizeLimit, jobLimit);
 	}
 
-	private void generateInputData(final String jobManagerAddress, final String basePath) throws IOException {
+	private void generateInputData(final InetSocketAddress jobManagerAddress, final String basePath) throws IOException {
 
 		final Path path = new Path(basePath + Path.SEPARATOR + "exp");
 
@@ -45,12 +58,47 @@ public final class WorkloadGenerator {
 
 		while (it.hasNext()) {
 			dataGenerator.generate(it.next());
+		}
+	}
+
+	private void runJobs(final InetSocketAddress jobManagerAddress, final String basePath) throws IOException {
+
+		final Map<String, MapReduceJob> mapReduceJobs = this.mapReduceWorkload.getMapReduceJobs();
+		final Iterator<MapReduceJob> it = mapReduceJobs.values().iterator();
+
+		final MultiJobClient mjc = new MultiJobClient(jobManagerAddress);
+
+		final java.io.File jarFile = java.io.File.createTempFile("job_", ".jar");
+		jarFile.deleteOnExit();
+
+		final JarFileCreator jfc = new JarFileCreator(jarFile);
+		jfc.addClass(MapTask.class);
+		jfc.addClass(ReduceTask.class);
+		jfc.createJarFile();
+
+		final Path jarFilePath = new Path("file:///" + jarFile.getAbsolutePath());
+
+		while (it.hasNext()) {
+
+			final Plan plan = PactPlanGenerator.toPactPlan(it.next());
+			final OptimizedPlan optimizedPlan = this.pactCompiler.compile(plan);
+			final JobGraphGenerator jobGraphGenerator = new JobGraphGenerator();
+			final JobGraph jobGraph = jobGraphGenerator.compileJobGraph(optimizedPlan);
+			jobGraph.addJar(jarFilePath);
+
 			try {
-				Thread.sleep(1000);
+				final JobSubmissionResult result = mjc.submitJob(jobGraph);
+				if (result.getReturnCode() != AbstractJobResult.ReturnCode.SUCCESS) {
+					System.err.println("Could not submit job " + jobGraph.getName() + ": " + result.getDescription());
+					continue;
+				}
 			} catch (InterruptedException ie) {
 				break;
 			}
+
 		}
+
+		mjc.shutdown();
 	}
 
 	public static void main(final String[] args) {
@@ -64,11 +112,11 @@ public final class WorkloadGenerator {
 		options.addOption("f", "filesize", true,
 			"Only run jobs whose input file size is less than the specified value in bytes");
 		options.addOption("l", "limit", true, "Limit the number of jobs to run to the specified value");
-		options.addOption("j", "jobmanager", true, "The Nephele job manager address");
+		options.addOption("c", "config", true, "The location of the configuration directory");
 
 		String inputDir = null;
 		String basePath = null;
-		String jobManagerAddress = null;
+		String configDir = null;
 		boolean generateInput = false;
 		int mapLimit = Integer.MAX_VALUE;
 		int reduceLimit = Integer.MAX_VALUE;
@@ -84,7 +132,7 @@ public final class WorkloadGenerator {
 			return;
 		}
 
-		if (!cmd.hasOption("i") || !cmd.hasOption("b") || !cmd.hasOption("j")) {
+		if (!cmd.hasOption("i") || !cmd.hasOption("b") || !cmd.hasOption("c")) {
 			final HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("wlgen", options);
 			return;
@@ -92,7 +140,7 @@ public final class WorkloadGenerator {
 
 		inputDir = cmd.getOptionValue("i");
 		basePath = cmd.getOptionValue("b");
-		jobManagerAddress = cmd.getOptionValue("j");
+		configDir = cmd.getOptionValue("c");
 
 		if (cmd.hasOption("g")) {
 			generateInput = true;
@@ -114,6 +162,16 @@ public final class WorkloadGenerator {
 			jobLimit = Integer.parseInt(cmd.getOptionValue("l"));
 		}
 
+		// Local the global configuration
+		GlobalConfiguration.loadConfiguration(configDir);
+
+		final String jmAddress = GlobalConfiguration.getString(ConfigConstants.JOB_MANAGER_IPC_ADDRESS_KEY,
+			ConfigConstants.DEFAULT_JOB_MANAGER_IPC_ADDRESS);
+		final int jmPort = GlobalConfiguration.getInteger(ConfigConstants.JOB_MANAGER_IPC_PORT_KEY,
+			ConfigConstants.DEFAULT_JOB_MANAGER_IPC_PORT);
+
+		final InetSocketAddress jobManagerAddress = new InetSocketAddress(jmAddress, jmPort);
+
 		final WorkloadGenerator wlg = new WorkloadGenerator();
 
 		try {
@@ -124,6 +182,8 @@ public final class WorkloadGenerator {
 			if (generateInput) {
 				wlg.generateInputData(jobManagerAddress, basePath);
 			}
+
+			wlg.runJobs(jobManagerAddress, basePath);
 
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
