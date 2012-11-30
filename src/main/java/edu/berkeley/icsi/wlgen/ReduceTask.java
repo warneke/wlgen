@@ -13,6 +13,11 @@ public class ReduceTask extends ReduceStub {
 	 */
 	@Override
 	public void reduce(final Iterator<PactRecord> records, final Collector<PactRecord> out) throws Exception {
+
+		while (records.hasNext()) {
+			out.collect(records.next());
+		}
+
 	}
 
 }

@@ -16,6 +16,8 @@ final class MapReduceJob {
 
 	private final File outputFile;
 
+	private double[] dataDistribution;
+
 	MapReduceJob(final String jobID, final int sequenceNumber, final int numberOfMapTasks,
 			final int numberOfReduceTasks, final File inputFile, final long sizeOfIntermediateData,
 			final File outputFile) {
@@ -30,6 +32,14 @@ final class MapReduceJob {
 
 		this.inputFile.usedAsInputBy(this);
 		this.outputFile.usedAsOutputBy(this);
+	}
+
+	void setDataDistribution(double[] dataDistribution) {
+		this.dataDistribution = dataDistribution;
+	}
+
+	double[] getDataDistribution() {
+		return this.dataDistribution;
 	}
 
 	String getJobID() {

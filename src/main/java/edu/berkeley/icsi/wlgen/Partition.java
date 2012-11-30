@@ -2,7 +2,7 @@ package edu.berkeley.icsi.wlgen;
 
 final class Partition {
 
-	static long[] createPartition(final int numberOfReducers, final long sizeOfIntermediateInput, final long minimum,
+	static double[] createPartition(final int numberOfReducers, final long sizeOfIntermediateInput, final long minimum,
 			final long percentile10, final long percentile25, final long median, final long percentile75,
 			final long percentile90, final long maximum) {
 
@@ -42,7 +42,24 @@ final class Partition {
 			start = end;
 		}
 
-		return partition;
+		return normalize(partition);
+	}
+	
+	private static double[] normalize(final long[] input) {
+		
+		double total = 0L;
+		for(int i = 0; i < input.length; ++i) {
+			total += input[i];
+		}
+		
+		double sum = 0L;
+		final double[] output = new double[input.length - 1];
+		for(int i = 0; i < output.length; ++i) {
+			output[i] = sum + (double) (input[i] / total);
+			sum += output[i];
+		}
+		
+		return output;
 	}
 
 	private static int findNextEnd(final long[] partition, final int start) {

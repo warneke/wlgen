@@ -74,13 +74,14 @@ public final class WorkloadGenerator {
 		final JarFileCreator jfc = new JarFileCreator(jarFile);
 		jfc.addClass(MapTask.class);
 		jfc.addClass(ReduceTask.class);
+		jfc.addClass(ReduceDataDistribution.class);
 		jfc.createJarFile();
 
 		final Path jarFilePath = new Path("file:///" + jarFile.getAbsolutePath());
 
 		while (it.hasNext()) {
 
-			final Plan plan = PactPlanGenerator.toPactPlan(it.next());
+			final Plan plan = PactPlanGenerator.toPactPlan(basePath, it.next());
 			final OptimizedPlan optimizedPlan = this.pactCompiler.compile(plan);
 			final JobGraphGenerator jobGraphGenerator = new JobGraphGenerator();
 			final JobGraph jobGraph = jobGraphGenerator.compileJobGraph(optimizedPlan);

@@ -66,7 +66,7 @@ final class MapReduceWorkload {
 					continue;
 				}
 
-				if (numberOfReduceTasks > reduceLimit) {
+				if (numberOfReduceTasks != reduceLimit) {
 					continue;
 				}
 
@@ -139,7 +139,7 @@ final class MapReduceWorkload {
 
 				final MapReduceJob mrj = new MapReduceJob(fields[0], sequenceNumber, numberOfMapTasks,
 					numberOfReduceTasks, inputFile, sizeOfIntermediateData, outputFile);
-
+				
 				mapReduceJobs.put(mrj.getJobID(), mrj);
 
 				if (++count >= jobLimit) {
@@ -240,19 +240,11 @@ final class MapReduceWorkload {
 					continue;
 				}
 
-				final long[] partition = Partition.createPartition(mrj.getNumberOfReduceTasks(),
+				final double[] dataDistribution = Partition.createPartition(mrj.getNumberOfReduceTasks(),
 					mrj.getSizeOfIntermediateData(), minimum, percentile10, percentile25, median, percentile75,
 					percentile90, maximum);
 
-				long sum = 0L;
-				for (int i = 0; i < partition.length; ++i) {
-					sum += partition[i];
-				}
-
-				System.out.println(mrj.getSizeOfIntermediateData() + " " + sum);
-
-				// System.out.println(numberOfReduceTasks);
-
+				mrj.setDataDistribution(dataDistribution);
 			}
 
 		} finally {

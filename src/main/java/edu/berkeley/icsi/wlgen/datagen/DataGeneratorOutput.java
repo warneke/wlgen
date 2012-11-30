@@ -12,7 +12,7 @@ import eu.stratosphere.nephele.types.StringRecord;
 
 public class DataGeneratorOutput extends AbstractFileOutputTask {
 
-	private static final char[] KEY_ALPHABET = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd',
+	public static final char[] KEY_ALPHABET = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd',
 		'e', 'f' };
 
 	private final Random rnd = new Random();
