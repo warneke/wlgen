@@ -75,6 +75,7 @@ public final class WorkloadGenerator {
 		jfc.addClass(MapTask.class);
 		jfc.addClass(ReduceTask.class);
 		jfc.addClass(ReduceDataDistribution.class);
+		jfc.addClass(IORatioAdapter.class);
 		jfc.createJarFile();
 
 		final Path jarFilePath = new Path("file:///" + jarFile.getAbsolutePath());

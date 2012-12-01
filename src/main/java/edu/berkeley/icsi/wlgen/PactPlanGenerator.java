@@ -28,13 +28,17 @@ final class PactPlanGenerator {
 			.name("Map")
 			.build();
 		mapper.setDegreeOfParallelism(mapReduceJob.getNumberOfMapTasks());
-		mapper.getParameters().setString("pact.out.distribution.class", "daniel");
+		double ioRatio = (double) mapReduceJob.getInputFile().getSize()
+			/ (double) mapReduceJob.getSizeOfIntermediateData();
+		mapper.getParameters().setFloat(MapTask.INPUT_OUTPUT_RATIO, (float) ioRatio);
 
 		final ReduceContract reducer = new ReduceContract.Builder(ReduceTask.class, PactString.class, 0)
 			.input(mapper)
 			.name("Reduce")
 			.build();
 		reducer.setDegreeOfParallelism(mapReduceJob.getNumberOfReduceTasks());
+		ioRatio = (double) mapReduceJob.getSizeOfIntermediateData() / (double) mapReduceJob.getOutputFile().getSize();
+		reducer.getParameters().setFloat(ReduceTask.INPUT_OUTPUT_RATIO, (float) ioRatio);
 
 		final FileDataSink out = new FileDataSink(RecordOutputFormat.class, outputFilePath, reducer, "Output");
 
