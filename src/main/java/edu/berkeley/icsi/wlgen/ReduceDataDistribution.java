@@ -48,7 +48,7 @@ public class ReduceDataDistribution implements DataDistribution {
 	@Override
 	public PactRecord getBucketBoundary(final int bucketNum, final int totalNumBuckets) {
 
-		if (this.boundaries.length != totalNumBuckets) {
+		if (this.boundaries.length != (totalNumBuckets -1)) {
 			throw new IllegalStateException("Number of buckets do not match (" + totalNumBuckets + ", expected "
 				+ this.boundaries.length + ")");
 		}

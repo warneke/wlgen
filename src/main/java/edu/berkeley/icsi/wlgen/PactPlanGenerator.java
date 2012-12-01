@@ -34,6 +34,7 @@ final class PactPlanGenerator {
 			.input(mapper)
 			.name("Reduce")
 			.build();
+		reducer.setDegreeOfParallelism(mapReduceJob.getNumberOfReduceTasks());
 
 		final FileDataSink out = new FileDataSink(RecordOutputFormat.class, outputFilePath, reducer, "Output");
 
@@ -43,6 +44,7 @@ final class PactPlanGenerator {
 			.lenient(true)
 			.field(PactString.class, 0)
 			.field(PactString.class, 1);
+		out.setDegreeOfParallelism(mapReduceJob.getNumberOfReduceTasks());
 
 		final Plan plan = new Plan(out, mapReduceJob.getJobID());
 
