@@ -31,7 +31,9 @@ final class IORatioAdapter {
 			}
 
 		} else {
-			System.out.println("NON-REDUCE MODE");
+			for (int i = 0; i < this.ratio; ++i) {
+				out.collect(record);
+			}
 		}
 
 	}

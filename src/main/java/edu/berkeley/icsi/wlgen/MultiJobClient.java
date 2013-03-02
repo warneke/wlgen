@@ -3,11 +3,11 @@ package edu.berkeley.icsi.wlgen;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import edu.berkeley.icsi.memngt.rpc.RPCService;
 import eu.stratosphere.nephele.client.JobSubmissionResult;
 import eu.stratosphere.nephele.jobgraph.JobGraph;
 import eu.stratosphere.nephele.protocols.JobManagementProtocol;
 import eu.stratosphere.nephele.rpc.CommonTypeUtils;
-import eu.stratosphere.nephele.rpc.RPCService;
 
 public class MultiJobClient {
 

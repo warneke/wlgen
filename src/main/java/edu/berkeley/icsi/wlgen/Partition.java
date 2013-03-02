@@ -44,21 +44,21 @@ final class Partition {
 
 		return normalize(partition);
 	}
-	
+
 	private static double[] normalize(final long[] input) {
-		
-		double total = 0L;
-		for(int i = 0; i < input.length; ++i) {
+
+		double total = 0.0;
+		for (int i = 0; i < input.length; ++i) {
 			total += input[i];
 		}
-		
-		double sum = 0L;
+
+		double sum = 0.0;
 		final double[] output = new double[input.length - 1];
-		for(int i = 0; i < output.length; ++i) {
-			output[i] = sum + (double) (input[i] / total);
-			sum += output[i];
+		for (int i = 0; i < output.length; ++i) {
+			output[i] = +(double) ((sum + input[i]) / total);
+			sum += input[i];
 		}
-		
+
 		return output;
 	}
 

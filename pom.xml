@@ -78,5 +78,10 @@
       <artifactId>pact-clients</artifactId>
       <version>0.2.1</version>
     </dependency>
+   <dependency>
+      <groupId>eu.stratosphere</groupId>
+      <artifactId>nephele-hdfs</artifactId>
+      <version>0.2.1</version>
+    </dependency>
   </dependencies>
 </project>
